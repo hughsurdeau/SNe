@@ -1,0 +1,27 @@
+# Region file format: DS9 version 4.1
+global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+fk5
+circle(0:57:29.2817,-0:05:56.134,50.000")
+circle(0:49:49.0054,+0:57:39.172,50.000")
+circle(0:25:45.7452,-0:47:33.482,50.000")
+circle(0:29:56.0916,-0:27:19.519,50.000")
+circle(23:39:02.2128,+0:25:53.040,50.000")
+circle(0:10:37.9061,-0:53:28.291,50.000") #faint
+circle(0:47:39.3850,+0:22:43.972,50.000")
+circle(23:28:39.0929,+0:34:20.734,50.000")
+circle(0:32:57.2983,-0:50:21.538,44.786") #small and faint
+circle(0:49:23.1828,+0:02:22.549,50.000")
+circle(23:46:21.4805,+0:57:02.401,50.000")
+circle(23:30:05.4907,+0:43:32.315,50.000")
+circle(23:31:23.7734,+0:37:45.548,50.000")#small and faint
+circle(23:56:31.1938,+0:57:32.976,50.000")
+circle(23:29:37.5840,+0:07:40.685,50.000")
+circle(1:06:11.5306,-0:36:50.922,50.000")
+circle(23:41:49.9394,+0:02:29.738,50.000")
+circle(0:44:59.1053,-1:01:38.953,50.000") #faint star outside galaxy??
+circle(0:11:39.2678,-0:28:24.139,50.000") #crazy galaxy
+circle(0:14:14.4631,-0:49:20.820,50.000") #small and faint
+circle(0:43:44.6722,+0:32:06.302,50.000") #v small and faint
+circle(0:59:18.7248,-0:56:49.362,50.000") #galactic arm
+circle(23:59:14.3316,+0:11:18.600,50.000") #small and faint
+circle(0:28:55.2823,-0:04:19.686,50.000") #merging galaxies
