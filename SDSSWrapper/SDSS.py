@@ -2,7 +2,9 @@ import requests
 import io
 import pandas as pd
 from astropy import units as u
+import astropy.coordinates as c
 from astropy.coordinates import SkyCoord
+import numpy as np
 
 
 class SkySearch:
@@ -57,5 +59,22 @@ class SkySearch:
                 distance = sep
                 closest_galaxy = objid
         return near_galaxies.loc[near_galaxies['bestObjID'] == closest_galaxy], distance
+
+
+
+def find_luminosity(redshift, flux_density, wl):
+    """
+    Takes a redshift and flux density and returns an approximate luminosity.
+    """
+    distance = c.Distance(z=redshift)
+    distance = distance.value
+    distance = distance * 3.086 * 10**19
+    flux = flux_density * 3.631 * (10 ** -32) * wl
+    lum = 4 * np.pi * flux * (distance ** 2)
+    return lum
+
+
+
+
 
 
