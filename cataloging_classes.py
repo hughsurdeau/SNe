@@ -47,26 +47,6 @@ class SNeCatalogue:
         else:
             self.dataframe = pd.read_csv(self.data_file)
 
-    def get_cid_old(self, ra_key='peak_ra'):
-        """
-        Returns the list of SNe to get a list of CID if not already known.
-        """
-        ra = []
-        for loc in self.locs:
-            if loc[0] > 180:
-                neg = str(round(loc[0]-360, 6))
-                if len(neg.split('.')[1]) < 6:
-                    neg = neg + '0'*(6-len(neg.split('.')[1]))
-                ra.append(neg)
-            else:
-                neg = str(loc[0])
-                if len(neg.split('.')[1]) < 6:
-                    neg = neg + '0'
-                ra.append(neg)
-        cid_df = self.dataframe.loc[self.dataframe[ra_key].isin(ra)]
-        cid_list = cid_df['cid'].tolist()
-        self.cid = cid_list
-
     def get_cid(self, ra_key='peak_ra'):
         zipped_values = list(zip(list(self.dataframe['cid'].values), list(self.dataframe[ra_key].values)))
         locations = [loc[0] for loc in self.locs]

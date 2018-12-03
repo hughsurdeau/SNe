@@ -7,6 +7,17 @@ from astropy.coordinates import SkyCoord
 import numpy as np
 
 
+def calc_luminosity(redshift, flux_density, wl):
+    """
+    Takes a redshift and flux density and returns an approximate luminosity.
+    """
+    distance = c.Distance(z=redshift)
+    distance = distance.value
+    distance = distance * 3.086 * 10**19
+    flux = flux_density * 3.631 * (10 ** -32) * wl
+    lum = 4 * np.pi * flux * (distance ** 2)
+    return lum
+
 class SkySearch:
     """
     Basic class for wrapping the rectangular search SDSS
@@ -30,6 +41,22 @@ class SkySearch:
         r = requests.get(self.sql_url, prams)
         # theres some random crap at the start I have to cut off for use as a data frame
         return r.content[8:]
+
+
+    def get_luminosity(self, galaxy):
+        """
+        Returns the luminosity of a specific galaxy :)))))
+        """
+        wavelength = 3.282159601489 * 10 ** 14
+        command = 'select z, sky_z \n from photoObj \n where ObjID = ' + str(galaxy)
+        r = self.sql_search(command)
+        r = r.decode("utf-8")
+        print(r)
+        r = r.split('\n')[1]
+        z, flux = r.split(',')
+        lum = calc_luminosity(float(z), float(flux), wavelength)
+        return lum
+        
 
     def close_galaxy_search(self, ra, dec, interval):
         command = 'select \n z, ra, dec, bestObjID \n from \n specObj \n where \n class = \'galaxy\'  \n and zWarning = 0 \n and ra<' + \
@@ -59,22 +86,6 @@ class SkySearch:
                 distance = sep
                 closest_galaxy = objid
         return near_galaxies.loc[near_galaxies['bestObjID'] == closest_galaxy], distance
-
-
-
-def find_luminosity(redshift, flux_density, wl):
-    """
-    Takes a redshift and flux density and returns an approximate luminosity.
-    """
-    distance = c.Distance(z=redshift)
-    distance = distance.value
-    distance = distance * 3.086 * 10**19
-    flux = flux_density * 3.631 * (10 ** -32) * wl
-    lum = 4 * np.pi * flux * (distance ** 2)
-    return lum
-
-
-
 
 
 
