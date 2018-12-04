@@ -69,3 +69,12 @@ def y_search(search_list, tuple_list):
             y.append(item[0])
     return y
 
+def multi_assign(keys, values, dictionary):
+    """
+    Appends values to a dictionary consisting of only lists
+    """
+    for key, value in zip(keys,values):
+        dictionary[key].append(value)
+    return dictionary
+
+

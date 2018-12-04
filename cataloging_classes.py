@@ -1,5 +1,6 @@
 from basic_funcs import *
 from astropy.table import Table
+from SDSSWrapper import SDSS as ss
 import pandas as pd
 import os
 import pickle
@@ -46,6 +47,31 @@ class SNeCatalogue:
             return source_df
         else:
             self.dataframe = pd.read_csv(self.data_file)
+
+    def search_dataframe(self, sne_type=None, set_locs=True):
+        """
+        Searches the inherent dataframe for a certain type of 
+        SNe. If set_locs=True, the instance's locs and CID will 
+        be set as those of the result of the search.
+        """
+        if sne_type == None:
+            sne_type = self.sn_type
+        data_keys = ['cid', 'locs', 'type_dr', 'z', 'z_best_err']
+        obs_sne = {}
+        for key in data_keys:
+            obs_sne[key] = []
+        for index, row in self.dataframe.iterrows():
+            if sne_type in row['type_dr'] and row['z_best_with_BOSS_HELIO'] != -9.0:
+                obs_sne['cid'].append(row['cid'])
+                obs_sne['type_dr'].append(row['type_dr'])
+                obs_sne['z'].append(row['z_best_with_BOSS_HELIO'])
+                obs_sne['z_best_err'].append(row['z_best_err_with_BOSS_HELIO'])
+                obs_sne['locs'].append((row['peak_ra'], row['peak_decl']))
+        observable_sne = pd.DataFrame.from_dict(obs_sne)
+        if set_locs:
+            self.locs = obs_sne['locs']
+            self.cid = obs_sne['cid']
+        return observable_sne
 
     def get_cid(self, ra_key='peak_ra'):
         zipped_values = list(zip(list(self.dataframe['cid'].values), list(self.dataframe[ra_key].values)))
@@ -101,3 +127,34 @@ class SNeCatalogue:
         self.locs = coords
 
 
+class FullTypeCatalogue(SNeCatalogue):
+
+    def __init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year 4/Project/code/CSV/test_data.csv'):
+        SNeCatalogue.__init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year 4/Project/code/CSV/test_data.csv')
+        self.generate_dataframe()
+        self.type_catalogue = self.search_dataframe()
+        self.searcher = ss.SkySearch()
+
+    def generate_galaxies(self):
+        data_keys = ['cid', 'gal_locs', 'gal_z', 'sne_z', 'sne_locs', 'sep']
+        host_galaxies = {}
+        for key in data_keys:
+            host_galaxies[key] = []
+        for index, row in self.type_catalogue.iterrows():
+            try:
+                r, distance = self.searcher.find_closest_galaxy(row['locs'][0], row['locs'][1], row['z'])
+                vals = [row['cid'], (float(r['ra']), float(r['dec'])), float(r['z']), row['z'], row['locs'], distance]
+                host_galaxies = multi_assign(data_keys, vals, host_galaxies)
+            except ValueError:
+                print('aigo')
+                pass
+        return host_galaxies
+
+
+
+
+
+
+s = FullTypeCatalogue('SNII')
+print(s.searcher)
+print(s.generate_galaxies())

@@ -47,30 +47,30 @@ class SkySearch:
         """
         Returns the luminosity of a specific galaxy :)))))
         """
-        wavelength = 3.282159601489 * 10 ** 14
+        freq = 3.282159601489 * 10 ** 14
         command = 'select z, sky_z \n from photoObj \n where ObjID = ' + str(galaxy)
         r = self.sql_search(command)
         r = r.decode("utf-8")
         print(r)
         r = r.split('\n')[1]
         z, flux = r.split(',')
-        lum = calc_luminosity(float(z), float(flux), wavelength)
+        lum = calc_luminosity(float(z), float(flux), freq)
         return lum
         
 
-    def close_galaxy_search(self, ra, dec, interval):
+    def close_galaxy_search(self, ra, dec, z, interval, z_interval):
         command = 'select \n z, ra, dec, bestObjID \n from \n specObj \n where \n class = \'galaxy\'  \n and zWarning = 0 \n and ra<' + \
             str(ra + interval) + '\n and ra>' + str(ra - interval) + '\n and dec<' + \
-            str(dec + interval) + '\n and dec>' + str(dec - interval)
+            str(dec + interval) + '\n and dec>' + str(dec - interval) + '\n and z >' + str(z-z_interval) + '\n and z <' + str(z+z_interval)
         csv = self.sql_search(command)
         galaxies = pd.read_csv(io.StringIO(csv.decode('utf-8')))
         return galaxies
 
-    def find_closest_galaxy(self, ra, dec):
+    def find_closest_galaxy(self, ra, dec, z):
         if ra < 0:
             ra += 360
         c_sne = SkyCoord(ra, dec, unit='deg')
-        near_galaxies = self.close_galaxy_search(ra, dec, interval=0.5)
+        near_galaxies = self.close_galaxy_search(ra, dec, z, interval=0.5, z_interval=0.05)
         redshifts = near_galaxies['z'].tolist()
         gal_ra = near_galaxies['ra'].tolist()
         gal_dec = near_galaxies['dec'].tolist()
