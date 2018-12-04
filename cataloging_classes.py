@@ -134,27 +134,41 @@ class FullTypeCatalogue(SNeCatalogue):
         self.generate_dataframe()
         self.type_catalogue = self.search_dataframe()
         self.searcher = ss.SkySearch()
+        self.host_galaxies = ''
 
     def generate_galaxies(self):
-        data_keys = ['cid', 'gal_locs', 'gal_z', 'sne_z', 'sne_locs', 'sep']
+        data_keys = ['cid', 'gal_locs', 'gal_z', 'sne_z', 'sne_locs', 'sep', 'objID']
         host_galaxies = {}
         for key in data_keys:
             host_galaxies[key] = []
         for index, row in self.type_catalogue.iterrows():
             try:
                 r, distance = self.searcher.find_closest_galaxy(row['locs'][0], row['locs'][1], row['z'])
-                vals = [row['cid'], (float(r['ra']), float(r['dec'])), float(r['z']), row['z'], row['locs'], distance]
+                vals = [row['cid'], (float(r['ra']), float(r['dec'])), float(r['z']), row['z'], row['locs'], distance, int(r['bestObjID'])]
                 host_galaxies = multi_assign(data_keys, vals, host_galaxies)
             except ValueError:
-                print('aigo')
                 pass
-        return host_galaxies
+        self.host_galaxies = host_galaxies
+
+    def lum_bin(self):
+        if self.host_galaxies == '':
+            self.generate_galaxies()
+        hg = self.host_galaxies
+        z_lum = []
+        for objid, z in zip(list(hg['objID']), list(hg['gal_z'])):
+            lum = self.searcher.get_luminosity(objid)
+            z_lum.append((z, lum))
+        return z_lum
 
 
 
 
 
 
-s = FullTypeCatalogue('SNII')
+
+
+
+
+s = FullTypeCatalogue('SNIc')
 print(s.searcher)
-print(s.generate_galaxies())
+print(s.lum_bin())

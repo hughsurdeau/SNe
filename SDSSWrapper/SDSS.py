@@ -51,7 +51,6 @@ class SkySearch:
         command = 'select z, sky_z \n from photoObj \n where ObjID = ' + str(galaxy)
         r = self.sql_search(command)
         r = r.decode("utf-8")
-        print(r)
         r = r.split('\n')[1]
         z, flux = r.split(',')
         lum = calc_luminosity(float(z), float(flux), freq)
@@ -85,6 +84,8 @@ class SkySearch:
             if sep < distance:
                 distance = sep
                 closest_galaxy = objid
+        if closest_galaxy == 0:
+            raise ValueError('ObjID is 0 so returns multiple galaxies')
         return near_galaxies.loc[near_galaxies['bestObjID'] == closest_galaxy], distance
 
 
