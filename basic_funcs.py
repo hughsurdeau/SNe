@@ -77,4 +77,43 @@ def multi_assign(keys, values, dictionary):
         dictionary[key].append(value)
     return dictionary
 
+def z_splitter(bins, data, z_key=0):
+    """
+    Splits data into bins based on their redshift
+    Returns a dictionary of the binned data
 
+    bins: int or list
+        Determines the bins the data will be split into. 
+        If int - splits the redshifts evenly into the number
+        of bins
+        If list - splits the redshifts into bins based on the
+        given list
+
+    data: list
+        A list of tuples which contains the data that will be 
+        split
+
+    z_key: int
+        Containt the tuple key of the redshift values within
+        data
+        Default = 0
+
+    """
+    bans = {}
+    if type(bins) == int:
+        z_max = max([row[z_key] for row in data])
+        interval = z_max/bins
+        bons = []
+        for i in range(bins):
+            bons.append((i+1)*interval)
+            bans[(i+1)*interval] = []
+        bins = bons
+    else:
+        for b in bins:
+            bans[b] = []
+    for row in data:
+        for b in bons:
+            if row[z_key] < b:
+                bans[b].append(row)
+                break
+    return bans

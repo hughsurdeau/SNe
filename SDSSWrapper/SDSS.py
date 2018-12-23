@@ -6,6 +6,15 @@ import astropy.coordinates as c
 from astropy.coordinates import SkyCoord
 import numpy as np
 
+def multi_assign_floats(keys, values, dictionary):
+    """
+    Appends values to a dictionary consisting of only lists
+    """
+    for i, key in enumerate(keys):
+        for row in values:
+            dictionary[key].append(row[i])
+    return dictionary
+
 
 def calc_luminosity(redshift, flux_density, wl):
     """
@@ -18,7 +27,7 @@ def calc_luminosity(redshift, flux_density, wl):
     lum = 4 * np.pi * flux * (distance ** 2)
     return lum
 
-class SkySearch:
+class SDSS_API:
     """
     Basic class for wrapping the rectangular search SDSS
     """
@@ -39,20 +48,27 @@ class SkySearch:
         prams = {'cmd': cmd, 'format': fmat, 'searchtype': 'equitorial',
                  'whichquery': whichquery, 'limit': lim}
         r = requests.get(self.sql_url, prams)
-        # theres some random crap at the start I have to cut off for use as a data frame
-        return r.content[8:]
+        search_results = {}
+        text = r.text.replace('#Table1\n','')
+        split = text.split('\n')
+        split = split[:-1]
+        headers = split[0].split(',')
+        data = [row.split(',') for row in split[1:]]
+        for header in headers:
+            search_results[header] = []
+        search_results = multi_assign_floats(headers, data, search_results)
+        return search_results
 
 
     def get_luminosity(self, galaxy):
         """
-        Returns the luminosity of a specific galaxy :)))))
+        Returns the luminosity of a specific galaxy
+
         """
         freq = 3.282159601489 * 10 ** 14
         command = 'select z, sky_z \n from photoObj \n where ObjID = ' + str(galaxy)
         r = self.sql_search(command)
-        r = r.decode("utf-8")
-        r = r.split('\n')[1]
-        z, flux = r.split(',')
+        z, flux = r['z'][0], r['sky_z'][0]
         lum = calc_luminosity(float(z), float(flux), freq)
         return lum
         
@@ -61,8 +77,8 @@ class SkySearch:
         command = 'select \n z, ra, dec, bestObjID \n from \n specObj \n where \n class = \'galaxy\'  \n and zWarning = 0 \n and ra<' + \
             str(ra + interval) + '\n and ra>' + str(ra - interval) + '\n and dec<' + \
             str(dec + interval) + '\n and dec>' + str(dec - interval) + '\n and z >' + str(z-z_interval) + '\n and z <' + str(z+z_interval)
-        csv = self.sql_search(command)
-        galaxies = pd.read_csv(io.StringIO(csv.decode('utf-8')))
+        search_results = self.sql_search(command)
+        galaxies = pd.DataFrame.from_dict(search_results)
         return galaxies
 
     def find_closest_galaxy(self, ra, dec, z):
@@ -90,3 +106,5 @@ class SkySearch:
 
 
 
+ss = SDSS_API()
+print(ss.get_luminosity(1237663784201748556))

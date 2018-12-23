@@ -21,7 +21,7 @@ class SNeCatalogue:
 
     def convert_units(self, HMS=True, rounding=True, decs=6):
         """
-        Converts the coordinates fo the SNe between HMS and degrees.
+        Converts the coordinates fo the self.locs between HMS and degrees.
         HMS=True means that the start coords are in HMS format.
         """
         updated_coords = []
@@ -133,7 +133,7 @@ class FullTypeCatalogue(SNeCatalogue):
         SNeCatalogue.__init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year 4/Project/code/CSV/test_data.csv')
         self.generate_dataframe()
         self.type_catalogue = self.search_dataframe()
-        self.searcher = ss.SkySearch()
+        self.searcher = ss.SDSS_API()
         self.host_galaxies = ''
 
     def generate_galaxies(self):
@@ -146,7 +146,7 @@ class FullTypeCatalogue(SNeCatalogue):
                 r, distance = self.searcher.find_closest_galaxy(row['locs'][0], row['locs'][1], row['z'])
                 vals = [row['cid'], (float(r['ra']), float(r['dec'])), float(r['z']), row['z'], row['locs'], distance, int(r['bestObjID'])]
                 host_galaxies = multi_assign(data_keys, vals, host_galaxies)
-            except ValueError:
+            except (ValueError, TypeError) as e:
                 pass
         self.host_galaxies = host_galaxies
 
@@ -161,14 +161,10 @@ class FullTypeCatalogue(SNeCatalogue):
         return z_lum
 
 
+s1a_full = FullTypeCatalogue('SNIc')
+s1a_lum_bins = s1a_full.lum_bin()
+print(s1a_lum_bins)
 
 
 
 
-
-
-
-
-s = FullTypeCatalogue('SNIc')
-print(s.searcher)
-print(s.lum_bin())
