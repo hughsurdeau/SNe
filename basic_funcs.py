@@ -117,3 +117,10 @@ def z_splitter(bins, data, z_key=0):
                 bans[b].append(row)
                 break
     return bans
+
+def max_list_of_lists(lists):
+    maxs = []
+    for l in lists:
+        maxs.append(max(l))
+    grand_max = max(maxs)
+    return grand_max

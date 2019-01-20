@@ -1,14 +1,33 @@
+import pandas as pd
+import pickle
+import math
 from basic_funcs import *
 from astropy.table import Table
 from SDSSWrapper import SDSS as ss
-import pandas as pd
-import os
-import pickle
+from HELMS_wrapper import *
+
+
+sne_cat_file = os.getcwd() + '/CSV/test_data.csv'
+
 
 
 class SNeCatalogue:
+    """
+    A general class for working with the SNe Catalogs.
 
-    def __init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year 4/Project/code/CSV/test_data.csv'):
+    self.sn_type: str
+        The type of SNe considered in the catalog 
+
+    self.locs: list of tuples
+        A list of the locations of the galaxies in (ra, dec)
+
+    self.cid: list
+        A list of the CID (SNe ID number) of the SNe
+
+    self.data_file: str
+        Location of the SNe catalog
+    """
+    def __init__(self, sn_type, locs=[], cid=[], data_file=sne_cat_file):
         if not all(isinstance(x, i) for x, i in zip([sn_type, locs, cid, data_file], [str, list, list, str])):
             raise TypeError(
                 "sn_type must be a string, locs and cid must be lists!")
@@ -16,13 +35,22 @@ class SNeCatalogue:
             raise ValueError("Data file must be in the fits or csv format")
         self.sn_type = sn_type
         self.locs = locs
+        self.searcher = ss.SDSS_API()
         self.cid = cid
         self.data_file = data_file
 
     def convert_units(self, HMS=True, rounding=True, decs=6):
         """
         Converts the coordinates fo the self.locs between HMS and degrees.
-        HMS=True means that the start coords are in HMS format.
+
+        HMS: bool
+            True = start coords are in HMS format.
+
+        rounding: bool
+            True = outputs rounded
+
+        decs: int
+            Number of decimals to round to
         """
         updated_coords = []
         if HMS:
@@ -38,7 +66,7 @@ class SNeCatalogue:
     def generate_dataframe(self):
         """
         Generates a dataframe from the datafile and returns the dataframe.
-        File must be in fits/csv format!
+        File must be in fits/csv format
         """
         if self.data_file[-4:] == 'fits':
             dat = Table.read(self.data_file, format='fits')
@@ -51,8 +79,16 @@ class SNeCatalogue:
     def search_dataframe(self, sne_type=None, set_locs=True):
         """
         Searches the inherent dataframe for a certain type of 
-        SNe. If set_locs=True, the instance's locs and CID will 
-        be set as those of the result of the search.
+        SNe. 
+        Returns a data frame with: CID, locations, type, z and z_err
+
+        sne_type: string
+            Determines the type of SNe the function will search for.
+            If none, will use the instance's SNe type (self.sn_type)
+
+        set_locs: bool
+            If true, the instance's locc and CID (self.locs/self.cid)
+            will be set to the locs and CID of the search.
         """
         if sne_type == None:
             sne_type = self.sn_type
@@ -74,6 +110,12 @@ class SNeCatalogue:
         return observable_sne
 
     def get_cid(self, ra_key='peak_ra'):
+        """
+        Returns the CID of the supernovae found in self.locs
+
+        ra_key: str
+            The key for right ascension
+        """
         zipped_values = list(zip(list(self.dataframe['cid'].values), list(self.dataframe[ra_key].values)))
         locations = [loc[0] for loc in self.locs]
         ra = []
@@ -90,12 +132,13 @@ class SNeCatalogue:
 
     def get_redshifts(self, z_key='z_best_with_BOSS_HELIO', z_err_key='z_best_err_with_BOSS_HELIO'):
         """
-        Returns a list of tuples, 1st item is CID, 2nd is z and 3rd is z_err. 
+        Returns a list of tuples including all key data for SNe
+        Columns are: cid, z, z_err, ra, decl, type
         """
-        cid_df = self.dataframe.loc[self.dataframe['cid'].isin(
-            c for c in self.cid)]
-        redshifts = zip(
-            self.cid, cid_df[z_key].tolist(), cid_df[z_err_key].tolist())
+        if len(self.cid) == 0:
+            self.get_cid()
+        cid_df = self.dataframe.loc[self.dataframe['cid'].isin(c for c in self.cid)]
+        redshifts = zip(self.cid, cid_df[z_key].tolist(), cid_df[z_err_key].tolist(), cid_df['peak_ra'], cid_df['peak_decl'], cid_df['type_dr'])
         self.redshifts = list(redshifts)
 
     def make_regions(self, filename):
@@ -126,27 +169,80 @@ class SNeCatalogue:
                     coords.append((coord[0], coord[1]))
         self.locs = coords
 
+    def find_host_galaxy(self, ra, dec, z):
+        """
+        Returns the ra, dec, radius, objID and angular distance of the SNe's host galaxy
+        """
+        df, distance = self.searcher.find_closest_galaxy(ra, dec, z)
+        print(df['bestObjID'])
+        gal_z, gal_rad = self.searcher.galaxy_radius_search(int(df['bestObjID']))
+        gal_data = [float(df['ra']), float(df['dec']), int(df['bestObjID']), float(df['z']), gal_rad, distance]
+        return gal_data
+
+    def glume(self, gal_id, loc, z, rad=None):
+        if rad is None:
+            redshift, rad = self.searcher.galaxy_radius_search(gal_id)
+        flux_d = get_flux_density(loc[0], loc[1], rad)
+        lum = get_lum(flux_d, z)
+        return lum
+
+    def get_core_metrics(self):
+        """
+        Returns a summary of all the key metrics needed for analysis
+        """
+        headers = ['cid', 'type', 'loc', 'gal_lum', 'z', 'rad_dist']
+        metrics = {}
+        for header in headers:
+            metrics[header] = []
+        for row in self.redshifts:
+            loc = (row[3], row[4])
+            try:
+                gldat = self.find_host_galaxy(loc[0], loc[1], row[1])
+            except(TypeError, ValueError) as e:
+                pass
+            lum = self.glume(gldat[2], (gldat[0], gldat[1]), gldat[3], gldat[4])
+            rad_pc = gldat[5]/gldat[4]
+            data = [row[0], row[5], loc, lum, (row[1], row[2]), rad_pc]
+            metrics = multi_assign(headers, data, metrics)
+        return metrics
+
+
+
+
 
 class FullTypeCatalogue(SNeCatalogue):
+    """
+    A subclass of SNeCatalogue which aims to more easily
+    manage the processing of the entire list of a given type
+    of SNe.
 
-    def __init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year 4/Project/code/CSV/test_data.csv'):
-        SNeCatalogue.__init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year 4/Project/code/CSV/test_data.csv')
+    Initializes with self.locs and self.cid set to the locations 
+    of every SNe candidate of the given type. 
+    """
+
+    def __init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year4/Project/code/CSV/test_data.csv'):
+        SNeCatalogue.__init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year4/Project/code/CSV/test_data.csv')
         self.generate_dataframe()
         self.type_catalogue = self.search_dataframe()
-        self.searcher = ss.SDSS_API()
         self.host_galaxies = ''
 
     def generate_galaxies(self):
+        """
+        Returns a dictionary containing SNe host galaxy data.
+        Headers: cid, gal_locs, gal_z, sne_z, sne_locs, sep, objID
+        """
         data_keys = ['cid', 'gal_locs', 'gal_z', 'sne_z', 'sne_locs', 'sep', 'objID']
         host_galaxies = {}
         for key in data_keys:
             host_galaxies[key] = []
         for index, row in self.type_catalogue.iterrows():
             try:
+                print(index/len(self.type_catalogue))
                 r, distance = self.searcher.find_closest_galaxy(row['locs'][0], row['locs'][1], row['z'])
                 vals = [row['cid'], (float(r['ra']), float(r['dec'])), float(r['z']), row['z'], row['locs'], distance, int(r['bestObjID'])]
                 host_galaxies = multi_assign(data_keys, vals, host_galaxies)
             except (ValueError, TypeError) as e:
+                print(e)
                 pass
         self.host_galaxies = host_galaxies
 
@@ -155,16 +251,33 @@ class FullTypeCatalogue(SNeCatalogue):
             self.generate_galaxies()
         hg = self.host_galaxies
         z_lum = []
-        for objid, z in zip(list(hg['objID']), list(hg['gal_z'])):
-            lum = self.searcher.get_luminosity(objid)
-            z_lum.append((z, lum))
+        for objid, z, locs in zip(list(hg['objID']), list(hg['gal_z']), list(hg['gal_locs'])):
+            try:
+                lum = self.glume(objid, locs, z)
+                if not math.isnan(lum):
+                    z_lum.append((z, lum))
+            except (TypeError, IndexError) as e:
+                pass
         return z_lum
 
 
-s1a_full = FullTypeCatalogue('SNIc')
-s1a_lum_bins = s1a_full.lum_bin()
-print(s1a_lum_bins)
 
+ss = SNeCatalogue(sn_type='SNIa')
+ss.import_regions(region_file=os.getcwd() + "/Regions/sn1a_distinguishable_deluxe.reg")
+ss.convert_units()
+ss.generate_dataframe()
+ss.get_redshifts()
+print(ss.get_core_metrics())
+
+#s1c_full = pickle.load(open( "s1b_full_cat.p", "rb" ))
+#print(s1c_full.lum_bin())
+
+"""
+s1a_full = FullTypeCatalogue('SNIa')
+s1a_full.generate_galaxies()
+#print(s1a_full.type_catalogue)
+pickle.dump(s1a_full, open( "s1a_full_cat.p", "wb" ) )
+"""
 
 
 
