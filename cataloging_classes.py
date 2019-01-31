@@ -174,7 +174,6 @@ class SNeCatalogue:
         Returns the ra, dec, radius, objID and angular distance of the SNe's host galaxy
         """
         df, distance = self.searcher.find_closest_galaxy(ra, dec, z)
-        print(df['bestObjID'])
         gal_z, gal_rad = self.searcher.galaxy_radius_search(int(df['bestObjID']))
         gal_data = [float(df['ra']), float(df['dec']), int(df['bestObjID']), float(df['z']), gal_rad, distance]
         return gal_data
@@ -196,14 +195,16 @@ class SNeCatalogue:
             metrics[header] = []
         for row in self.redshifts:
             loc = (row[3], row[4])
+            print("d")
             try:
                 gldat = self.find_host_galaxy(loc[0], loc[1], row[1])
-            except(TypeError, ValueError) as e:
-                pass
+            except(TypeError, ValueError, IndexError) as e:
+                continue
             lum = self.glume(gldat[2], (gldat[0], gldat[1]), gldat[3], gldat[4])
             rad_pc = gldat[5]/gldat[4]
             data = [row[0], row[5], loc, lum, (row[1], row[2]), rad_pc]
             metrics = multi_assign(headers, data, metrics)
+        self.metrics = pd.DataFrame.from_dict(metrics)
         return metrics
 
 
@@ -262,22 +263,13 @@ class FullTypeCatalogue(SNeCatalogue):
 
 
 
-ss = SNeCatalogue(sn_type='SNIa')
-ss.import_regions(region_file=os.getcwd() + "/Regions/sn1a_distinguishable_deluxe.reg")
-ss.convert_units()
-ss.generate_dataframe()
-ss.get_redshifts()
-print(ss.get_core_metrics())
 
-#s1c_full = pickle.load(open( "s1b_full_cat.p", "rb" ))
-#print(s1c_full.lum_bin())
 
-"""
-s1a_full = FullTypeCatalogue('SNIa')
+s1a_full = FullTypeCatalogue('SNII')
 s1a_full.generate_galaxies()
 #print(s1a_full.type_catalogue)
-pickle.dump(s1a_full, open( "s1a_full_cat.p", "wb" ) )
-"""
+pickle.dump(s1a_full, open( "s2_full_cat.p", "wb" ) )
+
 
 
 
