@@ -221,8 +221,8 @@ class FullTypeCatalogue(SNeCatalogue):
     of every SNe candidate of the given type. 
     """
 
-    def __init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year4/Project/code/CSV/test_data.csv'):
-        SNeCatalogue.__init__(self, sn_type, locs=[], cid=[], data_file='/Users/hughsurdeau/Desktop/Imperial/Year4/Project/code/CSV/test_data.csv')
+    def __init__(self, sn_type, locs=[], cid=[], data_file= os.getcwd() + '/CSV/test_data.csv'):
+        SNeCatalogue.__init__(self, sn_type, locs=[], cid=[], data_file= os.getcwd() + '/CSV/test_data.csv')
         self.generate_dataframe()
         self.type_catalogue = self.search_dataframe()
         self.host_galaxies = ''
@@ -261,14 +261,6 @@ class FullTypeCatalogue(SNeCatalogue):
                 pass
         return z_lum
 
-
-
-
-
-s1a_full = FullTypeCatalogue('SNII')
-s1a_full.generate_galaxies()
-#print(s1a_full.type_catalogue)
-pickle.dump(s1a_full, open( "s2_full_cat.p", "wb" ) )
 
 
 
