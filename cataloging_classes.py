@@ -8,6 +8,8 @@ from HELMS_wrapper import *
 
 
 sne_cat_file = os.getcwd() + '/CSV/test_data.csv'
+cleaned_sne_cat_file = os.getcwd() + '/CSV/filtered_data.csv'
+cwd = os.getcwd()
 
 
 
@@ -209,8 +211,6 @@ class SNeCatalogue:
 
 
 
-
-
 class FullTypeCatalogue(SNeCatalogue):
     """
     A subclass of SNeCatalogue which aims to more easily
@@ -263,5 +263,54 @@ class FullTypeCatalogue(SNeCatalogue):
 
 
 
+class Universe_Cataloger(SNeCatalogue):
+    """
+    A class for collecting data from the universe_map_supernovae catalogue
+    """
+    def __init__(self, tp='', df='rough_cleaned_ud.csv'):
+        SNeCatalogue.__init__(self, sn_type=tp, locs=[], cid=[], data_file=df)
+        self.new_database = pd.read_csv(self.data_file)
+        self.old_database = pd.read_csv(cleaned_sne_cat_file)
 
+    def clean_data(self):
+        """
+        Removes any SNe outside of the Helms map
+        """
+        to_drop = []
+        for index, row in self.new_database.iterrows():
+            print(index)
+            try:
+                fd = check_if_flux(row['ra'], row['dec'], 0.01)
+                if fd == 'Outside':
+                    to_drop.append(index)
+            except ValueError:
+                print('Fucked')
+                to_drop.append(index)
+        self.new_database = self.new_database.drop(to_drop)
+
+    def check_duplicates(self, rounding=0.000001):
+        """
+        Ensures that no duplicates from the main catalogue remain
+        Rounds to 5 decimal places to check 
+        """
+        to_drop = []
+        old_ra = sorted([float(r) for r in self.old_database['peak_ra'].tolist()])
+        old_dec = sorted([float(r) for r in self.old_database['peak_decl'].tolist()])
+        for index, row in self.new_database.iterrows():
+            ra = row['ra']
+            dec = row['dec']
+            for r in old_ra:
+                if ra+rounding > r:
+                    dif = abs(ra-r)
+                    if dif < rounding:
+                        for d in old_dec:
+                            if dec+rounding > d:
+                                dif = abs(ra-r)
+                                if dif < rounding:
+                                    to_drop.append(index)
+                                else:
+                                    break
+                    else:
+                        break
+        self.new_database = self.new_database.drop(to_drop)
 

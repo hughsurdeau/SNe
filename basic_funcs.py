@@ -124,3 +124,11 @@ def max_list_of_lists(lists):
         maxs.append(max(l))
     grand_max = max(maxs)
     return grand_max
+
+
+def min_list_of_lists(lists):
+    maxs = []
+    for l in lists:
+        maxs.append(min(l))
+    grand_max = min(maxs)
+    return grand_max
